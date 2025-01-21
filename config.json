@@ -1,0 +1,14 @@
+{
+    "app_name": "LawParser",
+    "description": "www.law.go.kr parser",
+    "author": "sgt.park",
+    "email": "kinphw@naver.com",
+    "create_ate": "Tue Jan 21 2025 23:54:37 GMT+0900 (Korean Standard Time)",    
+    "excel_file": "LawParser.xlsb",
+    "vba_folder": "vba-files",
+    "ribbon_file": "customUI14",
+    "ribbon_folder": "ribbons",
+    "logs": "on",
+    "xvba_packages": {},
+    "xvba_dev_packages": {}
+}

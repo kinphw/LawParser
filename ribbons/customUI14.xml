@@ -1,0 +1,33 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui">
+  <ribbon startFromScratch="false">
+    <tabs>
+      <tab id="LawParserTab" label="LawParser">
+
+        <group id="LawParserGroup2" label="일반">
+          <button id="btnLPLF2to1" label="중복개행제거" screentip="중복된 개행을 제거" imageMso="LineSpacing" size="normal" onAction="ModBase.ReplaceCRLF2to1" /><!-- 줄간격 제거 아이콘 -->
+          <button id="btnLPAutofit" label="행높이맞춤" screentip="행높이 Autofit" imageMso="RowHeight" size="normal" onAction="ModBase.AllRowsAutoFit" /><!-- 행높이 조절 아이콘 -->          
+          <button id="btnLPAddRowHeight" label="행높이+10" screentip="행높이+10" imageMso="RowHeight" size="normal" onAction="ModBase.IncreaseRowHeightBy10" /><!-- 행높이 증가 아이콘 -->                    
+          <button id="btnLPSetColumn" label="열설정" screentip="법령맞춤 열설정" imageMso="ColumnWidth" size="normal" onAction="ModBase.SetLawColumn" /><!-- 열너비 조절 아이콘 -->                              
+        </group>      
+
+        <group id="LawParserGroup3" label="조간분리">
+          <button id="btnLPMultipleArticle" label="여러조분리" screentip="여러 개의 조가 있는 셀을 지정하면 각 조별로 1개 셀로 분리" imageMso="SplitTable" size="normal" onAction="ModSplitMultipleArticle.ApplySplitMultipleArticle" /><!-- 표 분할 아이콘 -->                     
+        </group>      
+
+        <group id="LawParserGroup4" label="조내분리">
+          <button id="btnLPSingleArticle1" label="항분리" screentip="조 내 항별 분리" imageMso="OutlineExpandAll" size="normal" onAction="ModSplitSingleArticle.SplitSingleArticleHang" /><!-- 개요 확장 아이콘 -->                     
+          <button id="btnLPSingleArticle2" label="항호분리" screentip="조 내 항별호별 분리" imageMso="OutlineDemote" size="normal" onAction="ModSplitSingleArticle.SplitSingleArticleHangHo" /><!-- 개요 수준 증가 아이콘 -->                               
+          <button id="btnLPSingleArticle3" label="항호목분리" screentip="조 내 항별호별목별 분리" imageMso="OutlineExpand" size="normal" onAction="ModSplitSingleArticle.SplitSingleArticleHangHoMok" /><!-- 개요 수준 갤러리 아이콘 -->                                         
+        </group>      
+
+        <group id="LawParserGroup1" label="About">
+          <button id="btnLPWho" label="About" screentip="이건 뭐하는 것인가" imageMso="Info" size="normal" onAction="ModBase.WhoAlert" /><!-- 정보 아이콘 -->
+        </group>
+
+        <!-- <group id="customGroup2" label="Second">
+          <button id="btn3" label="Button-3" imageMso="MasterDocumentShow" size="normal" onAction="MyRibbon.btn3" />
+        </group> -->
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
