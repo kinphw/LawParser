@@ -66,7 +66,11 @@ Private Sub SplitMultipleArticlesCell(ByVal targetCell As Range)
     ' 다음에 다시 "제\d+조\("가 나타나거나 문자열 종료($) 시까지 한 덩어리
     'pattern = "제\d+조\([^)]*\)([\s\S]*?)(?=제\d+조\(|$)"
     'pattern = "제\d+조(?:의\d+)?\([^)]*\)(]\s\S]*?)(?=제\d+조(?:의\d+)?\(|$)" '수정
-    pattern = "제\d+조(?:의\d+)?\([^)]*\)([\s\S]*?)(?=제\d+조(?:의\d+)?\(|$)"
+    'pattern = "제\d+조(?:의\d+)?\([^)]*\)([\s\S]*?)(?=제\d+조(?:의\d+)?\(|$)" '기존 잘되던거
+    'pattern = "제\d+(?:장|조(?:의\d+)?\([^)]*\))([\s\S]*?)(?=제\d+(?:장|조(?:의\d+)?\([^)]*\))|$)" '장추가
+    'pattern = "제\d+(?:장|절|조(?:의\d+)?(?:\([^)]*\))?)([\s\S]*?)(?=제\d+(?:장|절|조(?:의\d+)?(?:\([^)]*\))?)|$)" '장+쩔추가
+    'pattern = "제\d+(?:장|절|조(?:의\d+)?\([^)]*\))([\s\S]*?)(?=제\d+(?:장|절|조(?:의\d+)?\([^)]*\))|$)" '직전대비 괄호보완
+    pattern = "((?:^|\n)제\d+(?:장|절)\s|제\d+조(?:의\d+)?\([^)]*\))([\s\S]*?)(?=((?:^|\n)제\d+(?:장|절)\s|제\d+조(?:의\d+)?\([^)]*\)|$))" '장분리 보완
 
     Set re = CreateObject("VBScript.RegExp")
     re.Global = True
@@ -94,6 +98,9 @@ Private Sub SplitMultipleArticlesCell(ByVal targetCell As Range)
         Dim oneArticle As String
         oneArticle = articleMatches(i).Value
 
+        ' ★★★ 전처리 함수 호출 (앞뒤 개행/공백 제거) ★★★
+        oneArticle = CleanArticleText(oneArticle)        
+
         If i = 0 Then
             ' 첫 번째 Article은 현재 셀에 저장
             targetCell.Value = oneArticle
@@ -108,26 +115,6 @@ Private Sub SplitMultipleArticlesCell(ByVal targetCell As Range)
     'MsgBox "조문 분리 작업이 완료되었습니다."
 
 End Sub
-
-
-'--------------------------------------------------
-' [1] ReplaceConsecutiveLineFeeds
-' (중복된 줄바꿈을 하나로 축소)
-'--------------------------------------------------
-'Private Function ReplaceConsecutiveLineFeeds(ByVal txt As String) As String
-'Dim temp As String
-'temp = txt
-'
-'' vbLf만을 기준으로 처리 (환경에 따라 vbCrLf도 고려)
-'Do While InStr(temp, vbLf & vbLf) > 0
-'temp = Replace(temp, vbLf & vbLf, vbLf)
-'Loop
-'
-'ReplaceConsecutiveLineFeeds = temp
-'End Function
-'
-'
-'Option Explicit
 
 Private Function CleanseAndRemoveLeadingSpaces(ByVal txt As String) As String
     Dim temp As String
@@ -208,63 +195,6 @@ Private Function RemoveTargetLines(ByVal inputText As String) As String
     
 End Function
 
-    ' ' (4) 각 줄을 순회하면서, "제거 대상"이 아니면 resultLines에 추가
-    ' For i = LBound(arrLines) To UBound(arrLines)
-    '     Dim oneLine As String
-    '     oneLine = arrLines(i)
-
-    '     ' 로직1
-    '     ' 만약 다음 중 하나라면 ⇒ 무시 (추가X)
-    '     ' 마지막에 공백 1칸 포함
-    '     ' - 조문체계도버튼
-    '     ' - 연혁
-    '     ' - 관련규제버튼
-    '     ' - 위임행정규제버튼
-    '     ' - 생활법령버튼
-
-    '     If (oneLine = "조문체계도버튼 ") Or (oneLine = "연혁 ") Or (oneLine = "관련규제버튼 ") Or (oneLine = "위임행정규칙버튼 ")  Or (oneLine = "생활법령버튼 ") Then
-    '     ' Skip
-
-    '     ' 로직2 : "어쩌고버튼"이 포함되어 있으면 스킵
-    '     ElseIf InStr(oneLine, "조문체계도버튼") > 0 Or InStr(oneLine, "관련규제버튼") > 0 Or InStr(oneLine, "위임행정규칙버튼") > 0 Or InStr(oneLine, "생활법령버튼") > 0 Then
-    '     ' Skip
-
-    '     ' 로직3 : 그냥 "연혁"이라면 스킵
-    '     ElseIf (Trim(oneLine) = "연혁") Then
-
-    '     ' 로직4 : 애초에 공백이라면 스킵
-    '     ElseIf (oneLine = "") Then
-
-    '     Else
-    '     ' 그 외 라인은 resultLines에 추가
-    '         resultLines.Add oneLine
-    '     End If
-    ' Next i
-
-    ' ' (5) resultLines를 다시 LF로 이어붙임
-    ' Dim outputText As String
-
-    ' If resultLines.Count = 0 Then
-    '     ' 모두 제거되어 비었으면 빈 문자열
-    '     outputText = ""
-    ' Else
-
-    '     Dim lineVal As Variant
-    '     For Each lineVal In resultLines
-
-    '         If outputText = "" Then
-    '             outputText = lineVal
-    '         Else
-    '             outputText = outputText & vbLf & lineVal
-    '         End If
-
-    '     Next lineVal
-    ' End If
-
-    ' ' (6) 결과 리턴
-    ' RemoveTargetLines = outputText
-
-' End Function
 
 ' 문자열에 배열의 단어가 포함되어 있는지 확인하는 함수
 Private Function ContainsAnyWord(str As String, words As Variant) As Boolean
@@ -279,3 +209,27 @@ Private Function ContainsAnyWord(str As String, words As Variant) As Boolean
     
     ContainsAnyWord = False
 End Function
+
+
+Private Function CleanArticleText(ByVal txt As String) As String
+    Dim temp As String
+    temp = txt
+
+    ' 1) CRLF -> LF로 통일
+    temp = Replace(temp, vbCrLf, vbLf)
+
+    ' 2) 전체 Trim(좌우 공백 제거)
+    temp = Trim(temp)
+
+    ' 3) 앞쪽에 남아있는 연속된 vbLf 제거
+    Do While Left(temp, 1) = vbLf
+        temp = Mid(temp, 2)
+    Loop
+
+    ' 4) 뒤쪽에 남아있는 연속된 vbLf 제거
+    Do While Right(temp, 1) = vbLf
+        temp = Left(temp, Len(temp) - 1)
+    Loop
+
+    CleanArticleText = temp
+End Function    
