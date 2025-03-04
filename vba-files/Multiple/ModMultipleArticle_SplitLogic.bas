@@ -28,13 +28,14 @@ Public Sub SplitMultipleArticlesCell(ByVal targetCell As Range)
 
     ' [C] 정규식 세팅
     ' (장, 절, 조를 줄 맨 앞에서만 찾되, 조는 괄호 필수 + 하이픈 처리)
-    pattern = "((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?\([^)]*\)))([\s\S]*?)(?=((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?\([^)]*\))|$))"
+    ' pattern = "((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?\([^)]*\)))([\s\S]*?)(?=((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?\([^)]*\))|$))"
+    pattern = "((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?(?:\([^)]*\)|\s*삭제<[^>]+>)))([\s\S]*?)(?=((?:^|\n)제\d+(?:-\d+)?(?:장|절|조(?:의\d+)?(?:\([^)]*\)|\s*삭제<[^>]+>))|$))"
 
     Set re = CreateObject("VBScript.RegExp")
     re.Global = True
     re.IgnoreCase = False
     re.MultiLine = False
-    re.Pattern = pattern
+    re.pattern = pattern
 
     ' [D] 매칭
     Set articleMatches = re.Execute(cleansedText)
