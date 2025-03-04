@@ -1,5 +1,5 @@
-'namespace=vba-files\Single\
 Attribute VB_Name = "ModSplitSingleArticle"
+'namespace=vba-files\Single\
 
 Option Explicit
 

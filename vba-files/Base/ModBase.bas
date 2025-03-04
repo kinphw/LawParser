@@ -1,5 +1,5 @@
-'namespace=vba-files\Base\
 Attribute VB_Name = "ModBase"
+'namespace=vba-files\Base\
 Option Explicit
 
 '개행문자 2개를 1개로 치환
@@ -59,8 +59,8 @@ End Sub
 Sub WhoAlert(control As IRibbonControl)
     
     MsgBox "제작 : 박병" & vbCrLf & _
-    "목적 : 법령정보시스템 엑셀파싱" & vbCrLf & _        
-    "버전 : 0.0.1 (250121)" & vbCrLf & _        
+    "목적 : 법령정보시스템 엑셀파싱" & vbCrLf & _
+    "버전 : 0.0.1 (250121)" & vbCrLf & _
     "문의 : kinphw@naver.com" & vbCrLf
 
 End Sub

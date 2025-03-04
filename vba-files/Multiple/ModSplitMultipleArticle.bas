@@ -1,10 +1,10 @@
-'namespace=vba-files\Multiple\
 Attribute VB_Name = "ModSplitMultipleArticle"
+'namespace=vba-files\Multiple\
 
 Option Explicit
 
 ' 진입점
-Public Sub ApplySplitMultipleArticle(control as IRibbonControl)
+Public Sub ApplySplitMultipleArticle(control As IRibbonControl)
 
     Dim rng As Range
     Dim oneCell As Range
@@ -164,6 +164,10 @@ Private Function RemoveTargetLines(ByVal inputText As String) As String
     Dim resultLines As Collection
     Dim i As Long
 
+    ' 제외할 단어들을 배열로 선언
+    Dim excludeWords As Variant
+    excludeWords = Array("조문체계도버튼", "연혁", "관련규제버튼", "위임행정규칙버튼", "생활법령버튼", "위임행정규칙")
+
     ' (1) 우선 CRLF -> LF 로 통일
     temp = Replace(inputText, vbCrLf, vbLf)
 
@@ -173,60 +177,105 @@ Private Function RemoveTargetLines(ByVal inputText As String) As String
     ' (3) 결과를 담을 Collection 객체 준비
     Set resultLines = New Collection
 
-    ' (4) 각 줄을 순회하면서, "제거 대상"이 아니면 resultLines에 추가
+    ' (4) 각 줄 순회
     For i = LBound(arrLines) To UBound(arrLines)
         Dim oneLine As String
-        oneLine = arrLines(i)
-
-        ' 로직1
-        ' 만약 다음 중 하나라면 ⇒ 무시 (추가X)
-        ' 마지막에 공백 1칸 포함
-        ' - 조문체계도버튼
-        ' - 연혁
-        ' - 관련규제버튼        
-        ' - 위임행정규제버튼
-        ' - 생활법령버튼        
-
-        If (oneLine = "조문체계도버튼 ") Or (oneLine = "연혁 ") Or (oneLine = "관련규제버튼 ") Or (oneLine = "위임행정규칙버튼 ")  Or (oneLine = "생활법령버튼 ") Then
-        ' Skip
-
-        ' 로직2 : "어쩌고버튼"이 포함되어 있으면 스킵
-        ElseIf InStr(oneLine, "조문체계도버튼") > 0 Or InStr(oneLine, "관련규제버튼") > 0 Or InStr(oneLine, "위임행정규칙버튼") > 0 Or InStr(oneLine, "생활법령버튼") > 0 Then
-        ' Skip
-
-        ' 로직3 : 그냥 "연혁"이라면 스킵
-        ElseIf (Trim(oneLine) = "연혁") Then
-
-        ' 로직4 : 애초에 공백이라면 스킵
-        ElseIf (oneLine = "") Then
-
-        Else
-        ' 그 외 라인은 resultLines에 추가
+        oneLine = Trim(arrLines(i))
+        
+        ' 빈 줄이 아니고 제외대상 단어가 없는 경우만 추가
+        If oneLine <> "" And Not ContainsAnyWord(oneLine, excludeWords) Then
             resultLines.Add oneLine
         End If
     Next i
 
-    ' (5) resultLines를 다시 LF로 이어붙임
+    
     Dim outputText As String
-
+    ' Collection을 문자열로 변환
     If resultLines.Count = 0 Then
-        ' 모두 제거되어 비었으면 빈 문자열
         outputText = ""
     Else
-
         Dim lineVal As Variant
         For Each lineVal In resultLines
-
             If outputText = "" Then
                 outputText = lineVal
             Else
                 outputText = outputText & vbLf & lineVal
             End If
-
         Next lineVal
     End If
-
-    ' (6) 결과 리턴
+    
     RemoveTargetLines = outputText
+    
+End Function
 
+    ' ' (4) 각 줄을 순회하면서, "제거 대상"이 아니면 resultLines에 추가
+    ' For i = LBound(arrLines) To UBound(arrLines)
+    '     Dim oneLine As String
+    '     oneLine = arrLines(i)
+
+    '     ' 로직1
+    '     ' 만약 다음 중 하나라면 ⇒ 무시 (추가X)
+    '     ' 마지막에 공백 1칸 포함
+    '     ' - 조문체계도버튼
+    '     ' - 연혁
+    '     ' - 관련규제버튼
+    '     ' - 위임행정규제버튼
+    '     ' - 생활법령버튼
+
+    '     If (oneLine = "조문체계도버튼 ") Or (oneLine = "연혁 ") Or (oneLine = "관련규제버튼 ") Or (oneLine = "위임행정규칙버튼 ")  Or (oneLine = "생활법령버튼 ") Then
+    '     ' Skip
+
+    '     ' 로직2 : "어쩌고버튼"이 포함되어 있으면 스킵
+    '     ElseIf InStr(oneLine, "조문체계도버튼") > 0 Or InStr(oneLine, "관련규제버튼") > 0 Or InStr(oneLine, "위임행정규칙버튼") > 0 Or InStr(oneLine, "생활법령버튼") > 0 Then
+    '     ' Skip
+
+    '     ' 로직3 : 그냥 "연혁"이라면 스킵
+    '     ElseIf (Trim(oneLine) = "연혁") Then
+
+    '     ' 로직4 : 애초에 공백이라면 스킵
+    '     ElseIf (oneLine = "") Then
+
+    '     Else
+    '     ' 그 외 라인은 resultLines에 추가
+    '         resultLines.Add oneLine
+    '     End If
+    ' Next i
+
+    ' ' (5) resultLines를 다시 LF로 이어붙임
+    ' Dim outputText As String
+
+    ' If resultLines.Count = 0 Then
+    '     ' 모두 제거되어 비었으면 빈 문자열
+    '     outputText = ""
+    ' Else
+
+    '     Dim lineVal As Variant
+    '     For Each lineVal In resultLines
+
+    '         If outputText = "" Then
+    '             outputText = lineVal
+    '         Else
+    '             outputText = outputText & vbLf & lineVal
+    '         End If
+
+    '     Next lineVal
+    ' End If
+
+    ' ' (6) 결과 리턴
+    ' RemoveTargetLines = outputText
+
+' End Function
+
+' 문자열에 배열의 단어가 포함되어 있는지 확인하는 함수
+Private Function ContainsAnyWord(str As String, words As Variant) As Boolean
+    Dim word As Variant
+    
+    For Each word In words
+        If InStr(str, CStr(word)) > 0 Then
+            ContainsAnyWord = True
+            Exit Function
+        End If
+    Next word
+    
+    ContainsAnyWord = False
 End Function
