@@ -20,6 +20,11 @@
           <button id="btnLPSingleArticle3" label="항호목분리" screentip="조 내 항별호별목별 분리" imageMso="OutlineExpand" size="normal" onAction="ModSplitSingleArticle.SplitSingleArticleHangHoMok" /><!-- 개요 수준 갤러리 아이콘 -->                                         
         </group>      
 
+        <group id="LawParserGroup5" label="비교표생성">
+          <button id="btnLPTracker1" label="전체비교" screentip="전체영역 비교" imageMso="OutlineExpandAll" size="normal" onAction="MCompare.ButtonCompareAll" /><!-- 개요 확장 아이콘 -->                     
+          <button id="btnLPTracker2" label="선택비교" screentip="선택셀 비교" imageMso="OutlineExpandAll" size="normal" onAction="MCompare.ButtonCompareSelection" /><!-- 개요 확장 아이콘 -->                               
+        </group>      
+
         <group id="LawParserGroup1" label="About">
           <button id="btnLPWho" label="About" screentip="이건 뭐하는 것인가" imageMso="Info" size="normal" onAction="ModBase.WhoAlert" /><!-- 정보 아이콘 -->
         </group>
