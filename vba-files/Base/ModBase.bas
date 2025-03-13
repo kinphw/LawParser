@@ -56,11 +56,31 @@ Sub SetLawColumn(control As IRibbonControl)
 
 End Sub
 
+Public Sub ReplaceJoBracket(control As IRibbonControl)
+    Dim rngUsed As Range
+    Dim rngCell As Range
+    
+    ' 현재 시트의 사용 영역(UsedRange)을 가져옴
+    Set rngUsed = ActiveSheet.UsedRange
+    
+    ' 사용 영역 내 각 셀을 순회
+    For Each rngCell In rngUsed
+        If Not IsEmpty(rngCell) Then
+            ' 셀의 값이 문자열인 경우에만 Replace 수행
+            If VarType(rngCell.Value) = vbString Then
+                rngCell.Value = Replace(rngCell.Value, "조 (", "조(")
+            End If
+        End If
+    Next rngCell
+End Sub
+
+
+
 Sub WhoAlert(control As IRibbonControl)
     
     MsgBox "제작 : 박병" & vbCrLf & _
     "목적 : 법령정보시스템 엑셀파싱" & vbCrLf & _
     "버전 : 0.1.0 (250313)" & vbCrLf & _
-    "문의 : kinphw@naver.com" & vbCrLf
+    "문의 : github.com/kinphw/LawParser" & vbCrLf
 
 End Sub

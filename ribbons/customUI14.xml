@@ -8,6 +8,7 @@
           <button id="btnLPAutofit" label="행높이맞춤" screentip="행높이 Autofit" imageMso="RowHeight" size="normal" onAction="ModBase.AllRowsAutoFit" /><!-- 행높이 조절 아이콘 -->          
           <button id="btnLPAddRowHeight" label="행높이+10" screentip="행높이+10" imageMso="RowHeight" size="normal" onAction="ModBase.IncreaseRowHeightBy10" /><!-- 행높이 증가 아이콘 -->                    
           <button id="btnLPSetColumn" label="열설정" screentip="법령맞춤 열설정" imageMso="ColumnWidth" size="normal" onAction="ModBase.SetLawColumn" /><!-- 열너비 조절 아이콘 -->                              
+          <button id="btnLPReplaceBracket" label="조 (" screentip="조 ( -> 조(" imageMso="ColumnWidth" size="normal" onAction="ModBase.ReplaceJoBracket" />
         </group>      
 
         <group id="LawParserGroup3" label="조간분리">

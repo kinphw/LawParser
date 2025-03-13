@@ -88,17 +88,34 @@ Public Sub CompareAll()
 End Sub
 
 '-----------------------------------------------------------------------------------------
-' (3) 현재 선택된 셀의 행만 비교
+' (3) 선택된 셀 영역의 모든 행을 비교 (중복 없이)
 '-----------------------------------------------------------------------------------------
 Public Sub CompareSelection()
     sDelimiter = " "
-
     lMaxCol = 1
-    Dim lSelRow As Long
-    lSelRow = Selection.Row
 
-    CompareOneRow lSelRow
+    ' Dictionary를 이용해 중복 없는 행 목록 생성
+    Dim dictRows As Object
+    Set dictRows = CreateObject("Scripting.Dictionary")
+    
+    Dim rngSel As Range, c As Range
+    Set rngSel = Selection
+    
+    Dim lRow As Long
+    For Each c In rngSel
+        lRow = c.Row
+        If Not dictRows.Exists(lRow) Then
+            dictRows.Add lRow, lRow
+        End If
+    Next c
+    
+    ' Dictionary에 모인 고유 행 번호들 각각에 대해 CompareOneRow 실행
+    Dim key As Variant
+    For Each key In dictRows.Keys
+        CompareOneRow CLng(key)
+    Next key
 End Sub
+
 
 '-----------------------------------------------------------------------------------------
 ' (4) 한 행에 대한 A열/B열 비교 → C열에 결과 표시
