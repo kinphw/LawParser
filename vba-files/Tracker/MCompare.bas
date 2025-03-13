@@ -3,72 +3,73 @@ Attribute VB_Name = "MCompare"
 Option Explicit
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-' 공용변수부 (전역변수)
+' 공용변수부 (전역변수) - 이름만 영어로 변경, 접두어 적용
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-Private 구분자 As String 'Delimiter (기본은 " ")
+Private sDelimiter As String          ' Delimiter
 
-Private 문자열_변경전 As String
-Private 문자열_변경후 As String
+Private sOrig As String               ' 문자열 변경 전
+Private sNew As String                ' 문자열 변경 후
 
-Private 어절수_문자열_변경전 As Long
-Private 어절수_문자열_변경후 As Long
+Private lWordCountOrig As Long        ' 어절수 (변경 전)
+Private lWordCountNew As Long         ' 어절수 (변경 후)
 
-Private 위치_행 As Long
-Private 위치_열 As Long
-Private 범위_행 As Long
-Private 범위_열 As Long
+Private lRowPos As Long               ' 위치(행)
+Private lColPos As Long               ' 위치(열)
+Private lMaxRow As Long               ' 범위(행)
+Private lMaxCol As Long               ' 범위(열)
 
-Private 작업시작행 As Long
+Private lStartRow As Long             ' 작업 시작 행
 
 ' Range 참조
-Private 위치_변경전 As Range
-Private 위치_변경후 As Range
-Private 위치_출력 As Range
+Private rngOrig As Range
+Private rngNew As Range
+Private rngOutput As Range
 
-' 요청사항: 행별로 신규/삭제/변경/NA 표시 목적 (현재 사용 안 함)
-Private 위치_출력_특별 As Range
+' 요청사항: 특별출력 (현재 사용 안 함)
+Private rngOutputSpecial As Range
 
 ' 최종 문자열 결과
-Private 문자열_작업결과 As String
+Private sResult As String
 
-' 삭제/추가 문구용 인덱스 배열 (동적)
-Private 배열_삭제된문자열_시작위치() As Variant
-Private 배열_삭제된문자열_길이() As Variant
-Private 배열_추가된문자열_시작위치() As Variant
-Private 배열_추가된문자열_길이() As Variant
+' 삭제/추가 문구 인덱스
+Private arrDelWordStart() As Variant
+Private arrDelWordLen() As Variant
+Private arrAddWordStart() As Variant
+Private arrAddWordLen() As Variant
 
-' 변경 전/후 “어절” 배열
-Private 배열_문자열_변경전 As Variant
-Private 배열_문자열_변경후 As Variant
-Private 배열_문자열_작업결과() As Variant
+' 변경 전/후 "어절" 배열
+Private arrWordsOrig As Variant
+Private arrWordsNew As Variant
+Private arrWordsResult() As Variant
 
-' 존재 여부에 대한 Boolean
-Private 존재여부_문자열_변경전 As Boolean
-Private 존재여부_문자열_변경후 As Boolean
-Private 존재여부_삭제된문자열 As Boolean
-Private 존재여부_추가된문자열 As Boolean
-Private 존재여부_문자열_작업결과 As Boolean
+' 존재 여부
+Private bHasOrig As Boolean
+Private bHasNew As Boolean
+Private bHasDelWords As Boolean
+Private bHasAddWords As Boolean
+Private bHasResult As Boolean
 
-' 인덱스 제어용
-Private 어절순번_문자열_변경전 As Long
-Private 어절순번_문자열_변경후 As Long
-Private 어절순번_문자열_작업결과 As Long
+' 인덱스 제어
+Private lWordIdxOrig As Long
+Private lWordIdxNew As Long
+Private lWordIdxResult As Long
 
-Private 어절순번_삭제된문자열 As Long
-Private 어절순번_추가된문자열 As Long
+Private lDelWordIdx As Long
+Private lAddWordIdx As Long
 
-Private 일치하는위치 As Variant
+Private vMatchPos As Variant
 
 ' 결과 문자열에서 몇 글자까지 썼는지 누적
-Private 글자수_작업결과 As Long
+Private lResultCharCount As Long
+
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 ' 리본 메뉴에서 호출되는 두 버튼
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Public Sub ButtonCompareAll(control As IRibbonControl)
-    Dim response As VbMsgBoxResult
-    response = MsgBox("전체 A열/B열 범위를 대상으로 실행하시겠습니까?", vbQuestion + vbYesNo, "실행 확인")
-    If response = vbYes Then
+    Dim lResponse As VbMsgBoxResult
+    lResponse = MsgBox("전체 A열/B열 범위를 대상으로 실행하시겠습니까?", vbQuestion + vbYesNo, "실행 확인")
+    If lResponse = vbYes Then
         CompareMain True
     Else
         MsgBox "실행을 취소했습니다.", vbInformation, "취소"
@@ -76,9 +77,9 @@ Public Sub ButtonCompareAll(control As IRibbonControl)
 End Sub
 
 Public Sub ButtonCompareSelection(control As IRibbonControl)
-    Dim response As VbMsgBoxResult
-    response = MsgBox("현재 선택된 셀의 행만 실행하시겠습니까?", vbQuestion + vbYesNo, "실행 확인")
-    If response = vbYes Then
+    Dim lResponse As VbMsgBoxResult
+    lResponse = MsgBox("현재 선택된 셀의 행만 실행하시겠습니까?", vbQuestion + vbYesNo, "실행 확인")
+    If lResponse = vbYes Then
         CompareMain False
     Else
         MsgBox "실행을 취소했습니다.", vbInformation, "취소"
@@ -89,352 +90,329 @@ End Sub
 ' 메인 루틴
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Private Sub CompareMain(Optional ByVal doAll As Boolean = True)
-    구분자 = " "        ' 어절 구분자는 공백으로
+    sDelimiter = " "  ' 어절 구분자(공백)
 
     If doAll Then
-        ' 전체 A열/B열에서 마지막 행까지만
-        Dim lastRowA As Long, lastRowB As Long
-        lastRowA = Cells(Rows.Count, 1).End(xlUp).Row  ' A열
-        lastRowB = Cells(Rows.Count, 2).End(xlUp).Row  ' B열
-        범위_행 = Application.WorksheetFunction.Max(lastRowA, lastRowB)
+        ' A열/B열 전체 범위에서 마지막 행 찾기
+        Dim lLastRowA As Long, lLastRowB As Long
+        lLastRowA = Cells(Rows.Count, 1).End(xlUp).Row  ' A열
+        lLastRowB = Cells(Rows.Count, 2).End(xlUp).Row  ' B열
+        lMaxRow = Application.WorksheetFunction.Max(lLastRowA, lLastRowB)
         
-        범위_열 = 1      ' 하드코딩: A/B 열만 비교
-        작업시작행 = 1   ' 보통 1행부터
+        lMaxCol = 1       ' A/B 열만 비교
+        lStartRow = 1     ' 일반적으로 1행부터 시작
 
-        Dim r As Long
-        For r = 작업시작행 To 범위_행
-            CompareOneRow r
-        Next r
+        Dim lRow As Long
+        For lRow = lStartRow To lMaxRow
+            CompareOneRow lRow
+        Next lRow
     Else
-        ' 현재 Selection이 있는 행만
-        범위_열 = 1
-        Dim selRow As Long
-        selRow = Selection.Row
+        ' 선택된 셀의 행만 실행
+        lMaxCol = 1
+        Dim lSelRow As Long
+        lSelRow = Selection.Row
         
-        CompareOneRow selRow
+        CompareOneRow lSelRow
     End If
 End Sub
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-' "특정 한 행"에 대해 A열/B열 비교 → C열에 결과 출력
+' "특정 한 행" A열/B열 비교 → C열에 결과 출력
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-Private Sub CompareOneRow(ByVal rowNum As Long)
-    Dim col As Long
+Private Sub CompareOneRow(ByVal lRowNum As Long)
+    Dim lCol As Long
     
-    ' 범위_열=1 이므로, col=1 만 1회 반복 (A열, B열)
-    For col = 1 To 범위_열
+    ' lMaxCol = 1 이므로, lCol=1만 반복 (A열 vs B열)
+    For lCol = 1 To lMaxCol
         
-        ' (1) A열 vs B열 문자열 가져오기
-        문자열_변경전 = Cells(rowNum, col).Value
-        문자열_변경후 = Cells(rowNum, col + 범위_열).Value  ' col=1이면 +1 → B열
+        ' (1) A열 vs B열 문자열
+        sOrig = Cells(lRowNum, lCol).Value
+        sNew = Cells(lRowNum, lCol + lMaxCol).Value  ' lCol=1이면 +1 → B열
 
         ' (2) 결과 출력할 셀 (C열)
-        Set 위치_변경전 = Cells(rowNum, col)
-        Set 위치_변경후 = Cells(rowNum, col + 범위_열)
-        Set 위치_출력 = Cells(rowNum, col + 2 * 범위_열)  ' col=1이면 +2 → C열
+        Set rngOrig = Cells(lRowNum, lCol)
+        Set rngNew = Cells(lRowNum, lCol + lMaxCol)
+        Set rngOutput = Cells(lRowNum, lCol + 2 * lMaxCol)  ' C열
 
-        위치_출력.Clear
+        rngOutput.Clear
 
-        ' (3) 양쪽 문자열이 모두 비어 있는지, 한 쪽만 비었는지, 둘 다 있는지 분기
-        If Len(문자열_변경전) = 0 And Len(문자열_변경후) = 0 Then
-            ' 둘 다 비어 있으면 결과 셀을 회색 배경
-            위치_출력.Interior.ColorIndex = 15
+        ' (3) 분기 처리
+        If Len(sOrig) = 0 And Len(sNew) = 0 Then
+            ' 둘 다 비어있으면 회색 배경
+            rngOutput.Interior.ColorIndex = 15
 
-        ElseIf Len(문자열_변경전) = 0 Then
-            ' 변경 전만 비어 있음 → 신규(밑줄)
-            위치_출력.Value = 문자열_변경후
-            With 위치_출력.Font
-                .ColorIndex = 14        ' 연두색
+        ElseIf Len(sOrig) = 0 Then
+            ' 변경 전만 비었음 → 신규(밑줄)
+            rngOutput.Value = sNew
+            With rngOutput.Font
+                .ColorIndex = 14      ' 연두색
                 .Underline = True
             End With
 
-        ElseIf Len(문자열_변경후) = 0 Then
-            ' 변경 후만 비어 있음 → 삭제(취소선)
-            위치_출력.Value = 문자열_변경전
-            With 위치_출력.Font
-                .ColorIndex = 3         ' 빨간색
+        ElseIf Len(sNew) = 0 Then
+            ' 변경 후만 비었음 → 삭제(취소선)
+            rngOutput.Value = sOrig
+            With rngOutput.Font
+                .ColorIndex = 3       ' 빨간색
                 .Strikethrough = True
             End With
 
         Else
-            ' 둘 다 값이 있음 → 어절 단위 비교 로직
-            ' → CompareText & DisplayText
-
-            ' 1) 먼저 "배열_문자열_변경전 / 배열_문자열_변경후" + "어절수" 세팅
-            Call PrepareWords
-
-            ' 2) CompareText → 실제 "어절 단위" 비교 로직
+            ' 둘 다 값이 있음 → 어절 단위 비교
+            PrepareWords
             CompareText
-
-            ' 3) DisplayText → 밑줄/취소선 표시
             DisplayText
         End If
-    Next col
+    Next lCol
 End Sub
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-' (보조 Sub) 문자열을 Split → 전역 배열에 담기
+' (보조) 문자열을 Split → 전역 배열에 세팅
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Private Sub PrepareWords()
-    Dim tmpArr As Variant
-    Dim cnt As Long
+    Dim arrTmp As Variant
+    Dim lCount As Long
     
-    ' --- 변경전 ---
-    If Len(문자열_변경전) = 0 Then
-        존재여부_문자열_변경전 = False
-        어절수_문자열_변경전 = 0
+    ' --- 변경 전 ---
+    If Len(sOrig) = 0 Then
+        bHasOrig = False
+        lWordCountOrig = 0
     Else
-        tmpArr = Split(문자열_변경전, 구분자)  ' 0-based
-        
-        cnt = UBound(tmpArr) - LBound(tmpArr) + 1
-        If cnt <= 0 Then
-            존재여부_문자열_변경전 = False
-            어절수_문자열_변경전 = 0
+        arrTmp = Split(sOrig, sDelimiter)  ' 0-based
+        lCount = UBound(arrTmp) - LBound(arrTmp) + 1
+        If lCount <= 0 Then
+            bHasOrig = False
+            lWordCountOrig = 0
         Else
-            존재여부_문자열_변경전 = True
-            ReDim 배열_문자열_변경전(1 To cnt)
+            bHasOrig = True
+            ReDim arrWordsOrig(1 To lCount)
+            
             Dim i As Long
-            For i = 1 To cnt
-                배열_문자열_변경전(i) = tmpArr(i - 1)
+            For i = 1 To lCount
+                arrWordsOrig(i) = arrTmp(i - 1)
             Next i
-            어절수_문자열_변경전 = cnt
+            lWordCountOrig = lCount
         End If
     End If
     
-    ' --- 변경후 ---
-    If Len(문자열_변경후) = 0 Then
-        존재여부_문자열_변경후 = False
-        어절수_문자열_변경후 = 0
+    ' --- 변경 후 ---
+    If Len(sNew) = 0 Then
+        bHasNew = False
+        lWordCountNew = 0
     Else
-        tmpArr = Split(문자열_변경후, 구분자)  ' 0-based
-        
-        cnt = UBound(tmpArr) - LBound(tmpArr) + 1
-        If cnt <= 0 Then
-            존재여부_문자열_변경후 = False
-            어절수_문자열_변경후 = 0
+        arrTmp = Split(sNew, sDelimiter)
+        lCount = UBound(arrTmp) - LBound(arrTmp) + 1
+        If lCount <= 0 Then
+            bHasNew = False
+            lWordCountNew = 0
         Else
-            존재여부_문자열_변경후 = True
-            ReDim 배열_문자열_변경후(1 To cnt)
+            bHasNew = True
+            ReDim arrWordsNew(1 To lCount)
+            
             Dim j As Long
-            For j = 1 To cnt
-                배열_문자열_변경후(j) = tmpArr(j - 1)
+            For j = 1 To lCount
+                arrWordsNew(j) = arrTmp(j - 1)
             Next j
-            어절수_문자열_변경후 = cnt
+            lWordCountNew = lCount
         End If
     End If
 End Sub
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
-' (핵심1) "어절" 단위로 변경 전/후 비교 → 전역변수에 기록
+' (핵심1) "어절" 단위 변경 전/후 비교 → 전역배열 기록
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Private Sub CompareText()
 
-    ' (1) 결과 배열(문자열_작업결과)을 미리 최대 길이로 ReDim
-    '     = (어절수_문자열_변경전 + 어절수_문자열_변경후)
-    ReDim 배열_문자열_작업결과(1 To (어절수_문자열_변경전 + 어절수_문자열_변경후))
-    존재여부_문자열_작업결과 = True
+    ' (1) 결과 배열 미리 최댓길이로 ReDim
+    ReDim arrWordsResult(1 To (lWordCountOrig + lWordCountNew))
+    bHasResult = True
 
-    ' (2) 삭제/추가 관련 전역배열 초기화
-    존재여부_삭제된문자열 = False
-    존재여부_추가된문자열 = False
-    어절순번_삭제된문자열 = 0
-    어절순번_추가된문자열 = 0
+    ' (2) 삭제/추가 관련 배열 초기화
+    bHasDelWords = False
+    bHasAddWords = False
+    lDelWordIdx = 0
+    lAddWordIdx = 0
 
-    글자수_작업결과 = 1  ' 결과 문자열에서 "현재까지 몇 글자?" (1부터 시작)
+    lResultCharCount = 1
     
-    어절순번_문자열_변경전 = 1
-    어절순번_문자열_변경후 = 1
-    어절순번_문자열_작업결과 = 0
+    lWordIdxOrig = 1
+    lWordIdxNew = 1
+    lWordIdxResult = 0
 
-    ' (3) 1차 무한루프: 서로 같거나 다른 어절을 비교
+    ' (3) 1차 루프
     Do
-        Dim 어절_문자열_변경전 As String
-        Dim 어절_문자열_변경후 As String
+        Dim sWordOrig As String
+        Dim sWordNew As String
         
-        ' 변경전 어절 가져오기
-        If (존재여부_문자열_변경전 = False) Or _
-           (어절순번_문자열_변경전 > 어절수_문자열_변경전) Then
-            어절_문자열_변경전 = ""
+        ' 변경 전 어절
+        If (Not bHasOrig) Or (lWordIdxOrig > lWordCountOrig) Then
+            sWordOrig = ""
         Else
-            어절_문자열_변경전 = 배열_문자열_변경전(어절순번_문자열_변경전)
+            sWordOrig = arrWordsOrig(lWordIdxOrig)
         End If
         
-        ' 변경후 어절 가져오기
-        If (존재여부_문자열_변경후 = False) Or _
-           (어절순번_문자열_변경후 > 어절수_문자열_변경후) Then
-            어절_문자열_변경후 = ""
+        ' 변경 후 어절
+        If (Not bHasNew) Or (lWordIdxNew > lWordCountNew) Then
+            sWordNew = ""
         Else
-            어절_문자열_변경후 = 배열_문자열_변경후(어절순번_문자열_변경후)
+            sWordNew = arrWordsNew(lWordIdxNew)
         End If
 
-        ' (3-1) 동일 어절이면 그대로 결과에 추가
-        If LCase(어절_문자열_변경전) = LCase(어절_문자열_변경후) And _
-           (어절_문자열_변경전 <> "") Then
+        ' (3-1) 동일 어절이면 결과에 그대로 추가
+        If LCase(sWordOrig) = LCase(sWordNew) And (sWordOrig <> "") Then
             
-            어절순번_문자열_작업결과 = 어절순번_문자열_작업결과 + 1
-            ReDim Preserve 배열_문자열_작업결과(1 To 어절순번_문자열_작업결과)
-            배열_문자열_작업결과(어절순번_문자열_작업결과) = 어절_문자열_변경전
+            lWordIdxResult = lWordIdxResult + 1
+            ReDim Preserve arrWordsResult(1 To lWordIdxResult)
+            arrWordsResult(lWordIdxResult) = sWordOrig
             
-            글자수_작업결과 = 글자수_작업결과 + 1 + Len(어절_문자열_변경전)
+            lResultCharCount = lResultCharCount + 1 + Len(sWordOrig)
             
-            ' 동일 어절은 후배열에서 비워서 중복 매칭 방지
-            배열_문자열_변경후(어절순번_문자열_변경후) = vbNullString
+            ' 후 배열에서 해당 어절 사용 소진
+            arrWordsNew(lWordIdxNew) = vbNullString
             
-            어절순번_문자열_변경전 = 어절순번_문자열_변경전 + 1
-            어절순번_문자열_변경후 = 어절순번_문자열_변경후 + 1
+            lWordIdxOrig = lWordIdxOrig + 1
+            lWordIdxNew = lWordIdxNew + 1
 
         Else
-            ' (3-2) 다른 어절이면, "어절_문자열_변경전"이
-            '       변경후 배열에 있는지 (MATCH) 확인
-            Dim tmpWord As String
-            tmpWord = 어절_문자열_변경전
+            ' (3-2) 다른 어절이면, 변경 후에 있는지 Match
+            Dim sTmpWord As String
+            sTmpWord = sWordOrig
             
-            If tmpWord = "" Then
-                ' 빈 문자열이라면 그냥 넘어가기
-                ' (즉, 변경전이 소진된 상태)
+            If sTmpWord = "" Then
+                ' 변경 전 소진된 상태
                 Exit Do
             End If
             
-            일치하는위치 = Application.Match(tmpWord, 배열_문자열_변경후, 0)
+            vMatchPos = Application.Match(sTmpWord, arrWordsNew, 0)
             
-            If IsError(일치하는위치) Then
-                ' 변경후에 없는 단어 -> "삭제된 단어"
+            If IsError(vMatchPos) Then
+                ' 변경 후에 없는 단어 → "삭제된" 단어
+                lWordIdxResult = lWordIdxResult + 1
+                ReDim Preserve arrWordsResult(1 To lWordIdxResult)
+                arrWordsResult(lWordIdxResult) = sTmpWord
                 
-                어절순번_문자열_작업결과 = 어절순번_문자열_작업결과 + 1
-                ReDim Preserve 배열_문자열_작업결과(1 To 어절순번_문자열_작업결과)
-                배열_문자열_작업결과(어절순번_문자열_작업결과) = tmpWord
-                
-                ' 삭제된문자열 배열 ReDim
-                If 존재여부_삭제된문자열 = False Then
-                    존재여부_삭제된문자열 = True
-                    ReDim 배열_삭제된문자열_시작위치(1 To 1)
-                    ReDim 배열_삭제된문자열_길이(1 To 1)
+                If Not bHasDelWords Then
+                    bHasDelWords = True
+                    ReDim arrDelWordStart(1 To 1)
+                    ReDim arrDelWordLen(1 To 1)
                 End If
                 
-                어절순번_삭제된문자열 = 어절순번_삭제된문자열 + 1
-                ReDim Preserve 배열_삭제된문자열_시작위치(1 To 어절순번_삭제된문자열)
-                ReDim Preserve 배열_삭제된문자열_길이(1 To 어절순번_삭제된문자열)
+                lDelWordIdx = lDelWordIdx + 1
+                ReDim Preserve arrDelWordStart(1 To lDelWordIdx)
+                ReDim Preserve arrDelWordLen(1 To lDelWordIdx)
                 
-                배열_삭제된문자열_시작위치(어절순번_삭제된문자열) = 글자수_작업결과
-                배열_삭제된문자열_길이(어절순번_삭제된문자열) = Len(tmpWord)
+                arrDelWordStart(lDelWordIdx) = lResultCharCount
+                arrDelWordLen(lDelWordIdx) = Len(sTmpWord)
                 
-                글자수_작업결과 = 글자수_작업결과 + 1 + Len(tmpWord)
+                lResultCharCount = lResultCharCount + 1 + Len(sTmpWord)
                 
-                어절순번_문자열_변경전 = 어절순번_문자열_변경전 + 1
+                lWordIdxOrig = lWordIdxOrig + 1
             
             Else
-                ' 변경후 배열에 같은 단어가 있다
-                ' → 그 앞에 있는 "추가된 단어"들을 모두 추가로 처리
+                ' 변경 후 배열에 같은 단어가 존재
+                ' 그 앞에 추가된 단어들을 처리
                 Do
-                    If 어절순번_문자열_변경후 > 어절수_문자열_변경후 Then
+                    If lWordIdxNew > lWordCountNew Then
                         Exit Do
                     End If
                     
-                    If LCase(배열_문자열_변경후(어절순번_문자열_변경후)) = LCase(tmpWord) Then
+                    If LCase(arrWordsNew(lWordIdxNew)) = LCase(sTmpWord) Then
                         Exit Do
                     End If
                     
-                    ' "추가된" 단어 하나를 결과에 넣어줌
-                    어절순번_문자열_작업결과 = 어절순번_문자열_작업결과 + 1
-                    ReDim Preserve 배열_문자열_작업결과(1 To 어절순번_문자열_작업결과)
+                    ' 추가된 단어
+                    lWordIdxResult = lWordIdxResult + 1
+                    ReDim Preserve arrWordsResult(1 To lWordIdxResult)
                     
-                    Dim addWord As String
-                    addWord = 배열_문자열_변경후(어절순번_문자열_변경후)
-                    배열_문자열_작업결과(어절순번_문자열_작업결과) = addWord
+                    Dim sAddWord As String
+                    sAddWord = arrWordsNew(lWordIdxNew)
+                    arrWordsResult(lWordIdxResult) = sAddWord
 
-                    ' 추가된문자열 배열 ReDim
-                    If 존재여부_추가된문자열 = False Then
-                        존재여부_추가된문자열 = True
-                        ReDim 배열_추가된문자열_시작위치(1 To 1)
-                        ReDim 배열_추가된문자열_길이(1 To 1)
+                    If Not bHasAddWords Then
+                        bHasAddWords = True
+                        ReDim arrAddWordStart(1 To 1)
+                        ReDim arrAddWordLen(1 To 1)
                     End If
 
-                    어절순번_추가된문자열 = 어절순번_추가된문자열 + 1
-                    ReDim Preserve 배열_추가된문자열_시작위치(1 To 어절순번_추가된문자열)
-                    ReDim Preserve 배열_추가된문자열_길이(1 To 어절순번_추가된문자열)
+                    lAddWordIdx = lAddWordIdx + 1
+                    ReDim Preserve arrAddWordStart(1 To lAddWordIdx)
+                    ReDim Preserve arrAddWordLen(1 To lAddWordIdx)
 
-                    배열_추가된문자열_시작위치(어절순번_추가된문자열) = 글자수_작업결과
-                    배열_추가된문자열_길이(어절순번_추가된문자열) = Len(addWord)
+                    arrAddWordStart(lAddWordIdx) = lResultCharCount
+                    arrAddWordLen(lAddWordIdx) = Len(sAddWord)
 
-                    글자수_작업결과 = 글자수_작업결과 + 1 + Len(addWord)
+                    lResultCharCount = lResultCharCount + 1 + Len(sAddWord)
 
                     ' 중복 매칭 방지
-                    배열_문자열_변경후(어절순번_문자열_변경후) = vbNullString
-                    어절순번_문자열_변경후 = 어절순번_문자열_변경후 + 1
+                    arrWordsNew(lWordIdxNew) = vbNullString
+                    lWordIdxNew = lWordIdxNew + 1
                     
                 Loop
-                
-                ' ↑ 루프를 빠져나오면 "현재 bWord == aWord"
-                '   실제 동일 단어를 처리할 수도 있으나,
-                '   여기서는 "다음 번 CompareText 루프"에서 처리.
-                
             End If
         End If
 
-        ' (3-3) 둘 중 하나라도 모든 어절을 소진하면 1차 루프 종료
-        If (어절순번_문자열_변경전 > 어절수_문자열_변경전) Or _
-           (어절순번_문자열_변경후 > 어절수_문자열_변경후) Then
+        ' (3-3) 둘 중 하나라도 소진되면 종료
+        If (lWordIdxOrig > lWordCountOrig) Or (lWordIdxNew > lWordCountNew) Then
             Exit Do
         End If
     Loop
 
-    ' (4) 남은 "추가된" 어절, "삭제된" 어절 처리
-    '   - 변경후가 남은 경우 (추가)
-    Do While 어절순번_문자열_변경후 <= 어절수_문자열_변경후
-        Dim remB As String
-        remB = 배열_문자열_변경후(어절순번_문자열_변경후)
-        If remB <> "" Then
-            어절순번_문자열_작업결과 = 어절순번_문자열_작업결과 + 1
-            ReDim Preserve 배열_문자열_작업결과(1 To 어절순번_문자열_작업결과)
-            배열_문자열_작업결과(어절순번_문자열_작업결과) = remB
+    ' (4) 남은 "추가된" 어절 처리
+    Do While lWordIdxNew <= lWordCountNew
+        Dim sRemB As String
+        sRemB = arrWordsNew(lWordIdxNew)
+        If sRemB <> "" Then
+            lWordIdxResult = lWordIdxResult + 1
+            ReDim Preserve arrWordsResult(1 To lWordIdxResult)
+            arrWordsResult(lWordIdxResult) = sRemB
 
-            If 존재여부_추가된문자열 = False Then
-                존재여부_추가된문자열 = True
-                ReDim 배열_추가된문자열_시작위치(1 To 1)
-                ReDim 배열_추가된문자열_길이(1 To 1)
+            If Not bHasAddWords Then
+                bHasAddWords = True
+                ReDim arrAddWordStart(1 To 1)
+                ReDim arrAddWordLen(1 To 1)
             End If
             
-            어절순번_추가된문자열 = 어절순번_추가된문자열 + 1
-            ReDim Preserve 배열_추가된문자열_시작위치(1 To 어절순번_추가된문자열)
-            ReDim Preserve 배열_추가된문자열_길이(1 To 어절순번_추가된문자열)
+            lAddWordIdx = lAddWordIdx + 1
+            ReDim Preserve arrAddWordStart(1 To lAddWordIdx)
+            ReDim Preserve arrAddWordLen(1 To lAddWordIdx)
             
-            배열_추가된문자열_시작위치(어절순번_추가된문자열) = 글자수_작업결과
-            배열_추가된문자열_길이(어절순번_추가된문자열) = Len(remB)
+            arrAddWordStart(lAddWordIdx) = lResultCharCount
+            arrAddWordLen(lAddWordIdx) = Len(sRemB)
             
-            글자수_작업결과 = 글자수_작업결과 + 1 + Len(remB)
+            lResultCharCount = lResultCharCount + 1 + Len(sRemB)
         End If
-        어절순번_문자열_변경후 = 어절순번_문자열_변경후 + 1
+        lWordIdxNew = lWordIdxNew + 1
     Loop
 
-    '   - 변경전이 남은 경우 (삭제)
-    Do While 어절순번_문자열_변경전 <= 어절수_문자열_변경전
-        Dim remA As String
-        remA = 배열_문자열_변경전(어절순번_문자열_변경전)
-        If remA <> "" Then
-            어절순번_문자열_작업결과 = 어절순번_문자열_작업결과 + 1
-            ReDim Preserve 배열_문자열_작업결과(1 To 어절순번_문자열_작업결과)
-            배열_문자열_작업결과(어절순번_문자열_작업결과) = remA
+    ' (5) 남은 "삭제된" 어절 처리
+    Do While lWordIdxOrig <= lWordCountOrig
+        Dim sRemA As String
+        sRemA = arrWordsOrig(lWordIdxOrig)
+        If sRemA <> "" Then
+            lWordIdxResult = lWordIdxResult + 1
+            ReDim Preserve arrWordsResult(1 To lWordIdxResult)
+            arrWordsResult(lWordIdxResult) = sRemA
 
-            If 존재여부_삭제된문자열 = False Then
-                존재여부_삭제된문자열 = True
-                ReDim 배열_삭제된문자열_시작위치(1 To 1)
-                ReDim 배열_삭제된문자열_길이(1 To 1)
+            If Not bHasDelWords Then
+                bHasDelWords = True
+                ReDim arrDelWordStart(1 To 1)
+                ReDim arrDelWordLen(1 To 1)
             End If
             
-            어절순번_삭제된문자열 = 어절순번_삭제된문자열 + 1
-            ReDim Preserve 배열_삭제된문자열_시작위치(1 To 어절순번_삭제된문자열)
-            ReDim Preserve 배열_삭제된문자열_길이(1 To 어절순번_삭제된문자열)
+            lDelWordIdx = lDelWordIdx + 1
+            ReDim Preserve arrDelWordStart(1 To lDelWordIdx)
+            ReDim Preserve arrDelWordLen(1 To lDelWordIdx)
 
-            배열_삭제된문자열_시작위치(어절순번_삭제된문자열) = 글자수_작업결과
-            배열_삭제된문자열_길이(어절순번_삭제된문자열) = Len(remA)
+            arrDelWordStart(lDelWordIdx) = lResultCharCount
+            arrDelWordLen(lDelWordIdx) = Len(sRemA)
 
-            글자수_작업결과 = 글자수_작업결과 + 1 + Len(remA)
+            lResultCharCount = lResultCharCount + 1 + Len(sRemA)
         End If
-        어절순번_문자열_변경전 = 어절순번_문자열_변경전 + 1
+        lWordIdxOrig = lWordIdxOrig + 1
     Loop
 
-    ' (5) 최종 결과 문자열 Join
-    문자열_작업결과 = Join(배열_문자열_작업결과, 구분자)
+    ' (6) 최종 결과 문자열
+    sResult = Join(arrWordsResult, sDelimiter)
 End Sub
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -443,42 +421,31 @@ End Sub
 Private Sub DisplayText()
     Dim i As Long
     
-    ' (1) 결과 문자열
-    위치_출력.Clear
-    If 존재여부_문자열_작업결과 Then
-        위치_출력.Value = 문자열_작업결과
+    rngOutput.Clear
+    If bHasResult Then
+        rngOutput.Value = sResult
     End If
 
-    ' (2) 삭제된 어절(취소선) 표시
-    If 존재여부_삭제된문자열 Then
-        For i = 1 To UBound(배열_삭제된문자열_시작위치)
-            With 위치_출력.Characters( _
-                Start:=배열_삭제된문자열_시작위치(i), _
-                Length:=배열_삭제된문자열_길이(i) _
-            ).Font
+    ' 삭제된 어절(취소선)
+    If bHasDelWords Then
+        For i = 1 To UBound(arrDelWordStart)
+            With rngOutput.Characters(Start:=arrDelWordStart(i), Length:=arrDelWordLen(i)).Font
                 .ColorIndex = 3           ' 빨간색
                 .Strikethrough = True
             End With
         Next i
     End If
     
-    ' (3) 추가된 어절(밑줄) 표시
-    If 존재여부_추가된문자열 Then
-        For i = 1 To UBound(배열_추가된문자열_시작위치)
-            With 위치_출력.Characters( _
-                Start:=배열_추가된문자열_시작위치(i), _
-                Length:=배열_추가된문자열_길이(i) _
-            ).Font
+    ' 추가된 어절(밑줄)
+    If bHasAddWords Then
+        For i = 1 To UBound(arrAddWordStart)
+            With rngOutput.Characters(Start:=arrAddWordStart(i), Length:=arrAddWordLen(i)).Font
                 .ColorIndex = 14         ' 연두색
                 .Underline = True
             End With
         Next i
     End If
 
-    ' (4) 셀 줄바꿈
-    위치_출력.WrapText = True
+    rngOutput.WrapText = True
 End Sub
-
-
-
 
