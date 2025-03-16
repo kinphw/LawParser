@@ -9,6 +9,8 @@
           <button id="btnLPAddRowHeight" label="행높이+10" screentip="행높이+10" imageMso="RowHeight" size="normal" onAction="ModBase.IncreaseRowHeightBy10" /><!-- 행높이 증가 아이콘 -->                    
           <button id="btnLPSetColumn" label="열설정" screentip="법령맞춤 열설정" imageMso="ColumnWidth" size="normal" onAction="ModBase.SetLawColumn" /><!-- 열너비 조절 아이콘 -->                              
           <button id="btnLPReplaceBracket" label="조 (" screentip="조 ( -> 조(" imageMso="ColumnWidth" size="normal" onAction="ModBase.ReplaceJoBracket" />
+          <button id="btnLPUtil1" label="LTrim" screentip="왼쪽공백삭제" imageMso="ColumnWidth" size="normal" onAction="MUtil.TrimLeftSelection" />          
+          <button id="btnLPUtil2" label="RemoveLeading" screentip="조문번호삭제" imageMso="ColumnWidth" size="normal" onAction="MUtil.RemoveSelection" />          
         </group>      
 
         <group id="LawParserGroup3" label="조간분리">
