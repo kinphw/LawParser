@@ -176,7 +176,7 @@ End Function
 ' - 간단히 첫 글자가 ①~⑨ (확장 시 [①-?] 등)
 '-----------------------------------------------------
 Private Function IsHangLine(ByVal lineText As String) As Boolean
-    If lineText Like "[①-⑨]*" Then
+    If lineText Like "[①-⑮]*" Then
         IsHangLine = True
     Else
         IsHangLine = False
